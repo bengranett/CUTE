@@ -35,6 +35,9 @@ extern char fnameRandom2[256];
 extern char fnameOut[256];
 extern char fnameRR[256];
 
+extern char pair_weights_file[256];
+extern int use_pair_weights;
+
 extern int corr_type;
 
 extern double omega_M;

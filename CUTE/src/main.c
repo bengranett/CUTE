@@ -30,6 +30,7 @@
 #include <math.h>
 #include "define.h"
 #include "common.h"
+#include "weighting.h"
 
 void init_run(Catalog **cat_d,Catalog **cat_r,
 	      Catalog **cat_d_2,Catalog **cat_r_2,
@@ -438,6 +439,9 @@ void run_angular_corr_bf(void)
   int nfull_dat,nfull_ran;
   int nfull_dat_2,nfull_ran_2;
 
+  Func weight_func;
+  Func * weight_func_ptr;
+
   timer(4);
 
 #ifdef _VERBOSE
@@ -461,6 +465,20 @@ void run_angular_corr_bf(void)
 	   &sum_wd,&sum_wd2,&sum_wd_2,&sum_wd2_2,
 	   &sum_wr,&sum_wr2,&sum_wr_2,&sum_wr2_2,
 	   &D1D2,&D1R2,&R1D2,&R1R2,nb_theta);
+
+  if (use_pair_weights)
+    if (read_pair_weights_file(pair_weights_file, &weight_func))
+      use_pair_weights=0;
+
+  print_info(" - Use pair weights is ");
+  if (use_pair_weights) {
+    weight_func_ptr = &weight_func;
+    print_info("true.\n");
+  } 
+  else {
+    weight_func_ptr = NULL;
+    print_info("false.\n");
+  }
 
   print_info("*** Boxing catalogs \n");
   init_2D_params(cat_dat,cat_ran,cat_dat_2,cat_ran_2,1);
@@ -496,7 +514,7 @@ void run_angular_corr_bf(void)
   if(use_two_catalogs) 
     cross_ang_bf(nfull_dat,indices_dat,boxes_dat,boxes_dat_2,D1D2);
   else
-    auto_ang_bf(nfull_dat,indices_dat,boxes_dat,D1D2);
+    auto_ang_bf(nfull_dat,indices_dat,boxes_dat,D1D2,weight_func_ptr);
   timer(2);
   print_info(" - D-R \n");
   cross_ang_bf(nfull_dat,indices_dat,boxes_dat,boxes_ran_2,D1R2);
@@ -513,7 +531,7 @@ void run_angular_corr_bf(void)
     if(use_two_catalogs) 
       cross_ang_bf(nfull_ran,indices_ran,boxes_ran,boxes_ran_2,R1R2);
     else
-      auto_ang_bf(nfull_ran,indices_ran,boxes_ran,R1R2);
+      auto_ang_bf(nfull_ran,indices_ran,boxes_ran,R1R2,NULL);
   }
   timer(1);
 
@@ -538,6 +556,9 @@ void run_angular_corr_bf(void)
   free(R1R2);
   if(use_two_catalogs)
     free(R1D2);
+
+  if (use_pair_weights) free_weight_func(&weight_func);
+
 }
 
 void run_angular_corr_pm(void)
@@ -771,6 +792,9 @@ void run_3d_ps_corr_bf(void)
   int nfull_dat,nfull_ran;
   int nfull_dat_2,nfull_ran_2;
 
+  Func weight_func;
+  Func *weight_func_ptr;
+
   timer(4);
   set_r_z();
 
@@ -796,6 +820,19 @@ void run_3d_ps_corr_bf(void)
 	   &sum_wr,&sum_wr2,&sum_wr_2,&sum_wr2_2,
 	   &D1D2,&D1R2,&R1D2,&R1R2,nb_rt*nb_rl);
   
+  if (use_pair_weights)
+    if (read_pair_weights_file(pair_weights_file, &weight_func)) use_pair_weights=0;
+
+  print_info(" - Use pair weights is ");
+  if (use_pair_weights) {
+    weight_func_ptr = &weight_func;
+    print_info("true.\n");
+  } 
+  else {
+    weight_func_ptr = NULL;
+    print_info("false.\n");
+  }
+
   print_info("*** Boxing catalogs \n");
   init_3D_params(cat_dat,cat_ran,cat_dat_2,cat_ran_2,3);
   boxes_dat=mk_Boxes3D_from_Catalog(cat_dat,&indices_dat,&nfull_dat);
@@ -830,7 +867,7 @@ void run_3d_ps_corr_bf(void)
   if(use_two_catalogs)
     cross_3d_ps_bf(nfull_dat,indices_dat,boxes_dat,boxes_dat_2,D1D2);
   else 
-    auto_3d_ps_bf(nfull_dat,indices_dat,boxes_dat,D1D2);
+    auto_3d_ps_bf(nfull_dat,indices_dat,boxes_dat,D1D2,weight_func_ptr);
   timer(2);
   print_info(" - D-R \n");
   cross_3d_ps_bf(nfull_dat,indices_dat,boxes_dat,boxes_ran_2,D1R2);
@@ -847,7 +884,7 @@ void run_3d_ps_corr_bf(void)
     if(use_two_catalogs)
       cross_3d_ps_bf(nfull_ran,indices_ran,boxes_ran,boxes_ran_2,R1R2);
     else 
-      auto_3d_ps_bf(nfull_ran,indices_ran,boxes_ran,R1R2);
+      auto_3d_ps_bf(nfull_ran,indices_ran,boxes_ran,R1R2,NULL);
   }
   timer(1);
 
@@ -873,6 +910,8 @@ void run_3d_ps_corr_bf(void)
   free(R1R2);
   if(use_two_catalogs)
     free(R1D2);
+
+  if (use_pair_weights) free_weight_func(&weight_func);
 }
 
 void run_3d_rm_corr_bf(void)

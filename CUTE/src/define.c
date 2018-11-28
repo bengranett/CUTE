@@ -37,6 +37,9 @@ char fnameRandom2[256]="file_none"; //Random catalog filename
 char fnameOut[256]="file_none";     //Output filename
 char fnameRR[256]="file_none";     //RR filename
 
+char pair_weights_file[256]="file_none";   //weights file
+int use_pair_weights=0;
+
 //Correlation
 int corr_type=-1; //Type of CF
 

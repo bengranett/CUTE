@@ -20,6 +20,8 @@
 //                                                                   //
 ///////////////////////////////////////////////////////////////////////
 
+#include "weighting.h"
+
 #ifndef _CUTE_COMMON_
 #define _CUTE_COMMON_
 
@@ -143,7 +145,7 @@ void auto_rad_bf(int npix_full,int *indices,RadialPixel *pixrad,histo_t *hh);
 void cross_rad_bf(int npix_full,int *indices,
 		  RadialPixel *pixrad1,RadialPixel *pixrad2,histo_t *hh);
 
-void auto_ang_bf(int npix_full,int *indices,Box2D *boxes,histo_t *hh);
+void auto_ang_bf(int npix_full,int *indices,Box2D *boxes,histo_t *hh, Func * weight_func);
 void cross_ang_bf(int npix_full,int *indices,
 		  Box2D *boxes1,Box2D *boxes2,histo_t *hh);
 void corr_ang_pm(Cell2D *cellsD,Cell2D *cellsR,
@@ -156,7 +158,7 @@ void auto_mono_bf(int nbox_full,int *indices,Box3D *boxes,histo_t *hh);
 void cross_mono_bf(int nbox_full,int *indices,
 		   Box3D *boxes1,Box3D *boxes2,histo_t *hh);
 
-void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,histo_t *hh);
+void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,histo_t *hh,  Func * weight_func);
 void cross_3d_ps_bf(int nbox_full,int *indices,
 		    Box3D *boxes1,Box3D *boxes2,histo_t *hh);
 

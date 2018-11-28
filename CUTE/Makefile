@@ -80,7 +80,8 @@ BOX2D = src/boxes2D.o
 BOX3D = src/boxes3D.o
 IO = src/io.o
 MAIN = src/main.c
-OFILES = $(DEF) $(COM) $(COSMO) $(CORR) $(BOX2D) $(BOX3D) $(IO) $(MAIN)
+WEIGHT = src/weighting.o
+OFILES = $(DEF) $(COM) $(COSMO) $(CORR) $(BOX2D) $(BOX3D) $(IO) $(WEIGHT) $(MAIN)
 
 #CU_CUTE
 BOXCUDA = src/boxesCUDA.o
@@ -105,6 +106,8 @@ $(CORR) : src/correlator.c
 	$(COMPCPU) $(OPTCPU) -c $< -o $@ $(INCLUDECOM)
 $(IO) : src/io.c
 	$(COMPCPU) $(OPTCPU_GPU) -c $< -o $@ $(INCLUDECOM)
+$(WEIGHT) : src/weighting.c
+	$(COMPCPU) $(OPTCPU) -c $< -o $@ $(INCLUDECOM)
 $(BOX2D) : src/boxes2D.c
 	$(COMPCPU) $(OPTCPU) -c $< -o $@ $(INCLUDECOM)
 $(BOX3D) : src/boxes3D.c

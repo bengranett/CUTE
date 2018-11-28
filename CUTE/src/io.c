@@ -761,6 +761,8 @@ void read_run_params(char *fname)
       n_side_cth=atoi(s2);
       n_side_phi=2*n_side_cth;
     }
+    else if(!strcmp(s1,"pair_weights_file="))
+      sprintf(pair_weights_file, "%s", s2);
     else
       fprintf(stderr,"CUTE: Unknown parameter %s\n",s1);
   }
@@ -770,6 +772,12 @@ void read_run_params(char *fname)
 
   if(strcmp(fnameData2,"file_none") || strcmp(fnameRandom2,"file_none"))
     use_two_catalogs=1;
+
+  if (strcmp(pair_weights_file,"file_none")){
+    use_pair_weights=1;
+  } else{
+    use_pair_weights=0;
+  }
 
   check_params();
 

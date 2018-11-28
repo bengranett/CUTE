@@ -28,6 +28,34 @@
 #include <stdlib.h>
 #include "define.h"
 #include "common.h"
+#include "weighting.h"
+
+
+inline double angular_pair_weight(double * pos1, double * pos2, Func * weight_func)
+{
+    double mag1, mag2, cth;
+    mag1 = sqrt(pos1[0]*pos1[0] + pos1[1]*pos1[1] + pos1[2]*pos1[2]);
+    mag2 = sqrt(pos2[0]*pos2[0] + pos2[1]*pos2[1] + pos2[2]*pos2[2]);
+    cth = (pos1[0]*pos2[0] + pos1[1]*pos2[1] + pos1[2]*pos2[2]) / mag1 / mag2;
+
+    // approximate arccos formula
+    cth=1-MIN(1,cth);
+    cth=sqrt(2 * cth + 0.333333333 * cth*cth);
+    cth=log10(cth);
+
+    return interpolate_weight(cth, weight_func);
+}
+
+inline double angular_pair_weight_mu(double cth, Func * weight_func)
+{
+    // approximate arccos formula
+    cth=1-MIN(1,cth);
+    cth=sqrt(2 * cth + 0.333333333 * cth*cth);
+    cth=log10(cth);
+
+    return interpolate_weight(cth, weight_func);
+}
+
 
 static inline int rt2bin(double r2)
 {
@@ -882,7 +910,7 @@ void cross_rad_bf(int npix_full,int *indices,
 }
 
 void auto_ang_bf(int npix_full,int *indices,Box2D *boxes,
-		 histo_t *hh)
+		 histo_t *hh, Func * weight_func)
 {
   //////
   // Angular auto-correlator
@@ -894,7 +922,7 @@ void auto_ang_bf(int npix_full,int *indices,Box2D *boxes,
 
 #pragma omp parallel default(none)		\
   shared(npix_full,indices,boxes,hh,n_side_phi)	\
-  shared(nb_theta,i_theta_max,ipix_0,ipix_f)
+  shared(nb_theta,i_theta_max,ipix_0,ipix_f, weight_func)
   {
     int j;
     histo_t *hthread=(histo_t *)my_calloc(nb_theta,sizeof(histo_t));
@@ -905,6 +933,7 @@ void auto_ang_bf(int npix_full,int *indices,Box2D *boxes,
       int ii;
       int ip1=indices[j];
       int np1=boxes[ip1].np;
+      double pair_weight;
       Box2DInfo *bi1=boxes[ip1].bi;
       int *bounds=bi1->bounds;
       for(ii=0;ii<np1;ii++) {
@@ -915,11 +944,16 @@ void auto_ang_bf(int npix_full,int *indices,Box2D *boxes,
 	  double *pos2=&(bi1->pos[N_POS*jj]);
 	  double prod=pos1[0]*pos2[0]+
 	    pos1[1]*pos2[1]+pos1[2]*pos2[2];
+       double pair_weight;
 	  if(prod>cth_max) {
 	    int ith=th2bin(prod);
 	    if((ith<nb_theta)&&(ith>=0)) {
 #ifdef _WITH_WEIGHTS
-	      hthread[ith]+=pos1[3]*pos2[3];
+         pair_weight = 1;
+         if (weight_func)
+            pair_weight = angular_pair_weight_mu(prod, weight_func);
+
+	      hthread[ith]+=pos1[3]*pos2[3]*pair_weight;
 #else //_WITH_WEIGHTS
 	      hthread[ith]++;
 #endif //_WITH_WEIGHTS
@@ -946,7 +980,11 @@ void auto_ang_bf(int npix_full,int *indices,Box2D *boxes,
 		    int ith=th2bin(prod);
 		    if((ith<nb_theta)&&(ith>=0)) {
 #ifdef _WITH_WEIGHTS
-		      hthread[ith]+=pos1[3]*pos2[3];
+             pair_weight = 1;
+             if (weight_func)
+                pair_weight = angular_pair_weight_mu(prod, weight_func);
+
+		      hthread[ith]+=pos1[3]*pos2[3]*pair_weight;
 #else //_WITH_WEIGHTS
 		      hthread[ith]++;
 #endif //_WITH_WEIGHTS
@@ -1463,7 +1501,7 @@ void cross_mono_bf(int nbox_full,int *indices,
 }
 
 void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,
-		   histo_t *hh)
+		   histo_t *hh, Func * weight_func)
 {
   //////
   // Monopole auto-correlator
@@ -1475,7 +1513,8 @@ void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,
 
 #pragma omp parallel default(none)					\
   shared(nbox_full,indices,boxes,hh,n_side,l_box)			\
-  shared(log_rt_max,i_rt_max,nb_rt,i_rl_max,nb_rl,ibox_0,ibox_f)
+  shared(log_rt_max,i_rt_max,nb_rt,i_rl_max,nb_rl,ibox_0,ibox_f) \
+  shared(weight_func)
   {
     int j;
     histo_t *hthread=(histo_t *)my_calloc(nb_rl*nb_rt,sizeof(histo_t));
@@ -1513,7 +1552,7 @@ void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,
 	for(jj=ii+1;jj<np1;jj++) {
 	  double r2;
 	  double *pos2=&(boxes[ip1].pos[N_POS*jj]);
-	  double xr[3],xcm[3];
+	  double xr[3],xcm[3], pair_weight;
 	  xr[0]=pos1[0]-pos2[0];
 	  xr[1]=pos1[1]-pos2[1];
 	  xr[2]=pos1[2]-pos2[2];
@@ -1530,8 +1569,13 @@ void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,
 	      if(rt2<rt2_max) {
 		int irt=rt2bin(rt2);
 		if((irt<nb_rt)&&(irt>=0)) {
+            // compute angular separation between points 1 and 2
+            pair_weight = 1;
+            if (weight_func)
+                pair_weight = angular_pair_weight(pos1, pos2, weight_func);
+
 #ifdef _WITH_WEIGHTS
-		  hthread[irl+nb_rl*irt]+=pos1[3]*pos2[3];
+		  hthread[irl+nb_rl*irt]+=pos1[3]*pos2[3]*pair_weight;
 #else //_WITH_WEIGHTS
 		  hthread[irl+nb_rl*irt]++;
 #endif //_WITH_WEIGHTS
@@ -1556,7 +1600,7 @@ void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,
 		  for(jj=0;jj<np2;jj++) {
 		    double r2;
 		    double *pos2=&(boxes[ip2].pos[N_POS*jj]);
-		    double xr[3],xcm[3];
+		    double xr[3],xcm[3], pair_weight;
 		    xr[0]=pos1[0]-pos2[0];
 		    xr[1]=pos1[1]-pos2[1];
 		    xr[2]=pos1[2]-pos2[2];
@@ -1573,8 +1617,13 @@ void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,
 			if(rt2<rt2_max) {
 			  int irt=rt2bin(rt2);
 			  if((irt<nb_rt)&&(irt>=0)) {
+                // compute angular separation between points 1 and 2
+                pair_weight = 1;
+                if (weight_func)
+                    pair_weight = angular_pair_weight(pos1, pos2, weight_func);
+
 #ifdef _WITH_WEIGHTS
-			    hthread[irl+nb_rl*irt]+=pos1[3]*pos2[3];
+			    hthread[irl+nb_rl*irt]+=pos1[3]*pos2[3]*pair_weight;
 #else //_WITH_WEIGHTS
 			    hthread[irl+nb_rl*irt]++;
 #endif //_WITH_WEIGHTS
