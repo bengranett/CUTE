@@ -162,7 +162,7 @@ void auto_3d_ps_bf(int nbox_full,int *indices,Box3D *boxes,histo_t *hh,  Func * 
 void cross_3d_ps_bf(int nbox_full,int *indices,
 		    Box3D *boxes1,Box3D *boxes2,histo_t *hh);
 
-void auto_3d_rm_bf(int nbox_full,int *indices,Box3D *boxes,histo_t *hh);
+void auto_3d_rm_bf(int nbox_full,int *indices,Box3D *boxes,histo_t *hh, Func * weight_func);
 void cross_3d_rm_bf(int nbox_full,int *indices,
 		    Box3D *boxes1,Box3D *boxes2,histo_t *hh);
 

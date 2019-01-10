@@ -1757,7 +1757,7 @@ void cross_3d_ps_bf(int nbox_full,int *indices,
 }
 
 void auto_3d_rm_bf(int nbox_full,int *indices,Box3D *boxes,
-		   histo_t *hh)
+		   histo_t *hh, Func * weight_func)
 {
   //////
   // Monopole auto-correlator
@@ -1769,7 +1769,8 @@ void auto_3d_rm_bf(int nbox_full,int *indices,Box3D *boxes,
 
 #pragma omp parallel default(none)			\
   shared(nbox_full,indices,boxes,hh,n_side,l_box)	\
-  shared(i_r_max,nb_r,nb_mu,ibox_0,ibox_f)
+  shared(i_r_max,nb_r,nb_mu,ibox_0,ibox_f) \
+  shared(weight_func)
   {
     int j;
     histo_t *hthread=(histo_t *)my_calloc(nb_r*nb_mu,sizeof(histo_t));
@@ -1806,7 +1807,7 @@ void auto_3d_rm_bf(int nbox_full,int *indices,Box3D *boxes,
 	for(jj=ii+1;jj<np1;jj++) {
 	  double r2;
 	  double *pos2=&(boxes[ip1].pos[N_POS*jj]);
-	  double xr[3],xcm[3];
+	  double xr[3],xcm[3],pair_weight;
 	  xr[0]=pos1[0]-pos2[0];
 	  xr[1]=pos1[1]-pos2[1];
 	  xr[2]=pos1[2]-pos2[2];
@@ -1825,8 +1826,14 @@ void auto_3d_rm_bf(int nbox_full,int *indices,Box3D *boxes,
 		icth=(int)(cth*nb_mu);
 	      }
 	      if((icth<nb_mu)&&(icth>=0)) {
+            // compute angular separation between points 1 and 2
+            pair_weight = 1;
+            if (weight_func)
+                pair_weight = angular_pair_weight(pos1, pos2, weight_func);
+
+
 #ifdef _WITH_WEIGHTS
-		hthread[icth+nb_mu*ir]+=pos1[3]*pos2[3];
+		hthread[icth+nb_mu*ir]+=pos1[3]*pos2[3]*pair_weight;
 #else //_WITH_WEIGHTS
 		hthread[icth+nb_mu*ir]++;
 #endif //_WITH_WEIGHTS
@@ -1850,7 +1857,7 @@ void auto_3d_rm_bf(int nbox_full,int *indices,Box3D *boxes,
 		  for(jj=0;jj<np2;jj++) {
 		    double r2;
 		    double *pos2=&(boxes[ip2].pos[N_POS*jj]);
-		    double xr[3],xcm[3];
+		    double xr[3],xcm[3], pair_weight;
 		    xr[0]=pos1[0]-pos2[0];
 		    xr[1]=pos1[1]-pos2[1];
 		    xr[2]=pos1[2]-pos2[2];
@@ -1869,8 +1876,13 @@ void auto_3d_rm_bf(int nbox_full,int *indices,Box3D *boxes,
 			  icth=(int)(cth*nb_mu);
 			}
 			if((icth<nb_mu)&&(icth>=0)) {
+                // compute angular separation between points 1 and 2
+                pair_weight = 1;
+                if (weight_func)
+                    pair_weight = angular_pair_weight(pos1, pos2, weight_func);
+
 #ifdef _WITH_WEIGHTS
-			  hthread[icth+nb_mu*ir]+=pos1[3]*pos2[3];
+			  hthread[icth+nb_mu*ir]+=pos1[3]*pos2[3]*pair_weight;
 #else //_WITH_WEIGHTS
 			  hthread[icth+nb_mu*ir]++;
 #endif //_WITH_WEIGHTS
